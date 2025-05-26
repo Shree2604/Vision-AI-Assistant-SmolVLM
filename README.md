@@ -36,26 +36,15 @@ Powered by cutting-edge vision-language AI models, VisionAI provides instant ans
 
 ## 🎬 Live Demo
 
+
 <div align="center">
-
-<!-- Embedding the video directly in the README -->
-<video controls width="80%" autoplay loop muted>
-  <source src="https://github.com/Shree2604/Vision-AI-Assistant-SmolVLM/blob/main/S144R.mp4" type="video/mp4">
-  Your browser does not support the video tag.
-</video>
-
+  <a href="https://youtu.be/qTJRImG_BQ0" target="_blank">
+    <img src="https://img.youtube.com/vi/qTJRImG_BQ0/0.jpg" alt="Watch the demo video" width="80%">
+  </a>
+  <br/>
+  📺 Click the image above to watch the live demo on YouTube.
 </div>
 
-<details>
-<summary>💡 Can't see the video? Click here for alternative ways to view the demo</summary>
-
-### Alternative Ways to View the Demo
-
-1. **Download the Repository** - Clone or download this repository to view the demo video locally
-2. **Visit the Releases Page** - Check the latest release to download the demo video
-3. **Check Project Website** - Visit our project website for a live demo
-
-</details>
 
 ## ✨ Key Features
 
