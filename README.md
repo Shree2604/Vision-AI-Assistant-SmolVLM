@@ -2,10 +2,6 @@
 
 # 🤖 VisionAI Camera Assistant
 
-<p align="center">
-  <img src="https://i.imgur.com/GcZPO25.png" alt="VisionAI Logo" width="150">
-</p>
-
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![WebGPU](https://img.shields.io/badge/WebGPU-Ready-blue.svg)](https://developer.chrome.com/docs/web-platform/webgpu/)
 [![HuggingFace](https://img.shields.io/badge/🤗_HuggingFace-SmolVLM--500M-orange)](https://github.com/HuggingFaceTB/SmolVLM-500M-Instruct)
@@ -98,10 +94,6 @@ Powered by cutting-edge vision-language AI models, VisionAI provides instant ans
 
 ## 🚀 Quick Start Guide
 
-<div align="center">
-  <img src="https://i.imgur.com/6XO6nGf.png" alt="Getting Started" width="80%">
-</div>
-
 1. **Open the application** in a WebGPU-compatible browser (Chrome/Edge 113+)
 2. **Grant camera access** when prompted
 3. **Type your question** about what the camera sees
@@ -178,17 +170,6 @@ node C:\Users\SHREERAJ M\AppData\Roaming\npm\node_modules\http-server\bin\http-s
 2. When prompted, **allow camera access**
 3. Follow the on-screen instructions
 
-## 🧰 Requirements
-
-- WebGPU-compatible browser (Chrome/Edge 113+)
-- Webcam/camera connected to your device
-- Local development server (see instructions above)
-- Internet connection (for initial model loading only)
-
-## 🛠️ Behind the Scenes
-
-This app leverages WebGPU to run the SmolVLM-500M-Instruct model directly in your browser. It captures frames from your camera, processes them with the AI model, and returns natural language responses to your questions - all without sending any data to external servers!
-
 ## 🌟 Try asking...
 
 - "What objects are visible?"
@@ -197,20 +178,7 @@ This app leverages WebGPU to run the SmolVLM-500M-Instruct model directly in you
 - "Describe this scene"
 - "Are there any animals?"
 
-## 💡 Use Cases
-
-- **Education**: Help students identify objects, plants, animals or learn about their surroundings
-- **Accessibility**: Assist visually impaired users in understanding their environment
-- **Travel**: Identify landmarks, translate signs, or learn about local attractions
-- **Shopping**: Get information about products by pointing your camera at them
-- **Home Projects**: Identify tools, parts, or get guidance for DIY projects
-- **Nature Exploration**: Identify plants, animals, or geological features
-
 ## 🤔 How It Works
-
-<div align="center">
-  <img src="https://i.imgur.com/LzMZFs1.png" alt="How It Works" width="90%">
-</div>
 
 1. **WebGPU Technology**: Leverages modern browser capabilities to run AI directly on your device
 2. **SmolVLM Model**: A powerful vision-language model optimized for efficient browser execution
@@ -221,11 +189,4 @@ This app leverages WebGPU to run the SmolVLM-500M-Instruct model directly in you
 ## 📜 License
 
 Released under the [MIT License](LICENSE).
-
 ---
-
-<div align="center">
-<p>Made with ❤️ and JavaScript by Shreeraj Mummdivarapu</p>
-
-<a href="https://www.linkedin.com/in/m-shreeraj" target="_blank"><img src="https://img.shields.io/badge/Connect_on_LinkedIn-0077B5?style=for-the-badge&logo=linkedin&logoColor=white" alt="LinkedIn"/></a>
-</div>
