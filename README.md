@@ -40,7 +40,7 @@ Powered by cutting-edge vision-language AI models, VisionAI provides instant ans
 
 <!-- Embedding the video directly in the README -->
 <video controls width="80%" autoplay loop muted>
-  <source src="./S144R.mp4" type="video/mp4">
+  <source src="https://github.com/Shree2604/Vision-AI-Assistant-SmolVLM/blob/main/S144R.mp4" type="video/mp4">
   Your browser does not support the video tag.
 </video>
 
