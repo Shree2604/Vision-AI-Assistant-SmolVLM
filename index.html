@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>VisionAI Camera Assistant</title>
+    <link rel="stylesheet" href="style.css" />
+    <style>
+      .thank-you-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.8);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 1000;
+      }
+      
+      .thank-you-content {
+        background-color: white;
+        padding: 30px;
+        border-radius: 16px;
+        text-align: center;
+        max-width: 80%;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 15px;
+      }
+      
+      .refresh-button {
+        background-color: var(--primary);
+        color: white;
+        border: none;
+        padding: 12px 24px;
+        border-radius: 50px;
+        font-weight: bold;
+        cursor: pointer;
+        margin-top: 10px;
+        transition: all 0.2s ease;
+      }
+      
+      .refresh-button:hover {
+        background-color: var(--primary-dark);
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+      }
+    </style>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🤖</text></svg>">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0" />
+  </head>
+  <body>
+    <header>
+      <div class="logo">
+        <span class="logo-icon">🤖</span>
+        <h1>VisionAI Camera Assistant</h1>
+        <span class="status-indicator" id="statusIndicator"></span>
+      </div>
+    </header>
+    
+    <div class="control-panel">
+      <div class="io-areas">
+        <div class="input-group">
+          <label for="instructionText">Ask about what you see:</label>
+          <textarea
+            id="instructionText"
+            name="Instruction"
+            placeholder="E.g., 'What do you see?' or 'Is there a person in the image?'"
+          ></textarea>
+        </div>
+        <div class="input-group">
+          <label for="responseText">AI Response:</label>
+          <textarea
+            id="responseText"
+            name="Response"
+            readonly
+            placeholder="AI response will appear here..."
+          ></textarea>
+        </div>
+      </div>
+
+      <div class="controls">
+        <div class="control-group">
+          <label for="intervalSelect">Update frequency:</label>
+          <div class="custom-select-wrapper">
+            <select id="intervalSelect" name="Interval between requests">
+              <option value="0" selected>Continuous</option>
+              <option value="100">Very fast (100ms)</option>
+              <option value="250">Fast (250ms)</option>
+              <option value="500">Medium (500ms)</option>
+              <option value="1000">Slow (1s)</option>
+              <option value="2000">Very slow (2s)</option>
+            </select>
+            <div class="select-icon">
+              <span class="material-symbols-rounded">expand_more</span>
+            </div>
+          </div>
+        </div>
+        <button id="startButton" class="start">
+          <span class="button-icon material-symbols-rounded">play_arrow</span>
+          Start Analysis
+        </button>
+      </div>
+    </div>
+    
+    <div class="main-content">
+      <div id="videoContainer">
+        <video id="videoFeed" autoplay playsinline></video>
+        <div id="loadingOverlay">
+          <span class="loader"></span>
+          <div>Loading AI Model...</div>
+          <div class="loading-details">This may take a moment</div>
+        </div>
+        <div id="webgpuWarning" class="hidden">
+          <span class="material-symbols-rounded" style="font-size: 48px;">error</span>
+          <div>WebGPU not available in this browser</div>
+          <div>Please use Chrome or Edge version 113+</div>
+        </div>
+      </div>
+    </div>
+    
+    <canvas id="canvas" class="hidden"></canvas>
+    
+    <footer>
+      <p>Developed with ❤️ by <a href="https://www.linkedin.com/in/m-shreeraj" target="_blank">Shreeraj Mummdivarapu</a></p>
+    </footer>
+
+    <script type="module">
+      import {
+        AutoProcessor,
+        AutoModelForVision2Seq,
+        RawImage,
+      } from "https://cdn.jsdelivr.net/npm/@huggingface/transformers/dist/transformers.min.js";
+
+      const video = document.getElementById("videoFeed");
+      const canvas = document.getElementById("canvas");
+      const instructionText = document.getElementById("instructionText");
+      const responseText = document.getElementById("responseText");
+      const intervalSelect = document.getElementById("intervalSelect");
+      const startButton = document.getElementById("startButton");
+      const loadingOverlay = document.getElementById("loadingOverlay");
+      const videoContainer = document.getElementById("videoContainer");
+
+      instructionText.value = "What do you see?"; // default instruction
+
+      let stream;
+      let isProcessing = false;
+
+      let processor, model;
+
+      async function initModel() {
+        const modelId = "HuggingFaceTB/SmolVLM-500M-Instruct"; // or "HuggingFaceTB/SmolVLM-Instruct";
+        loadingOverlay.style.display = "flex";
+        responseText.value = "Loading AI processor...";
+        
+        try {
+          processor = await AutoProcessor.from_pretrained(modelId);
+          responseText.value = "Processor loaded. Loading vision model...";
+          document.querySelector('.loading-details').textContent = "Loading vision model (may take a minute)...";
+          
+          model = await AutoModelForVision2Seq.from_pretrained(modelId, {
+            dtype: {
+              embed_tokens: "fp16",
+              attn_input: "fp16",
+              attn_output: "fp16",
+              ffn_output: "fp16",
+            },
+          });
+
+          responseText.value = "Model loaded. Ready for camera initialization.";
+          document.querySelector('.loading-details').textContent = "Initializing camera...";
+          loadingOverlay.style.display = "none";
+        } catch (error) {
+          responseText.value = `Error loading model: ${error.message}`;
+          loadingOverlay.style.display = "flex";
+          document.querySelector('.loading-details').textContent = "Error loading model. Please try refreshing.";
+          console.error("Model loading error:", error);
+        }
+      }
+
+      async function initCamera() {
+        // First check if mediaDevices is supported
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+          const errorMsg = 'Browser does not support camera access';
+          responseText.value = errorMsg;
+          showCameraError(errorMsg, 'Camera API not supported', 'Try using Chrome or Edge version 113+');
+          return;
+        }
+        
+        // Check if we're on localhost (we'll focus on localhost for simplicity)
+        const isLocalhost = window.location.hostname === 'localhost' || 
+                         window.location.hostname === '127.0.0.1';
+        
+        if (!isLocalhost) {
+          const errorMsg = 'For security, this app is configured to run only on localhost';
+          responseText.value = errorMsg;
+          showCameraError('Localhost Required', errorMsg, 'See instructions below on how to run a local server');
+          console.warn('App configured to run only on localhost for camera security');
+          return;
+        }
+
+        try {
+          console.log('Attempting to access camera...');
+          responseText.value = "Requesting camera access...";
+          
+          stream = await navigator.mediaDevices.getUserMedia({
+            video: {
+              facingMode: "environment",
+              width: { ideal: 1280 },
+              height: { ideal: 720 },
+            },
+          });
+          
+          console.log('Camera access granted, setting up video stream');
+          video.srcObject = stream;
+          
+          // Wait for video to be ready
+          await new Promise((resolve) => {
+            video.onloadeddata = resolve;
+          });
+          
+          // Check if video dimensions are valid
+          if (video.videoWidth === 0 || video.videoHeight === 0) {
+            throw new Error('Invalid video dimensions, stream may not be properly initialized');
+          }
+          
+          console.log(`Video initialized: ${video.videoWidth}x${video.videoHeight}`);
+          responseText.value = "Camera initialized. Ready to start.";
+        } catch (err) {
+          console.error("Camera error:", err);
+          responseText.value = `Error accessing camera: ${err.name}: ${err.message}`;
+          
+          let errorTitle = 'Camera Access Error';
+          let errorDetail = 'Please grant camera permission and refresh';
+          
+          // Provide more specific messages for common errors
+          if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+            errorTitle = 'Camera Permission Denied';
+            errorDetail = 'Please allow camera access in your browser settings';
+          } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
+            errorTitle = 'No Camera Found';
+            errorDetail = 'Please connect a camera to your device';
+          } else if (err.name === 'NotReadableError' || err.name === 'TrackStartError') {
+            errorTitle = 'Camera Already In Use';
+            errorDetail = 'Close other apps or tabs that might be using your camera';
+          } else if (err.name === 'OverconstrainedError') {
+            errorTitle = 'Camera Constraints Error';
+            errorDetail = 'Your camera does not support the required settings';
+          }
+          
+          showCameraError(errorTitle, err.message, errorDetail);
+        }
+      }
+      
+      function showCameraError(title, message, suggestion) {
+        const errorMessage = document.createElement('div');
+        errorMessage.innerHTML = `
+          <span class="material-symbols-rounded" style="font-size: 48px; color: var(--danger)">videocam_off</span>
+          <div style="font-weight: bold; margin-bottom: 8px;">${title}</div>
+          <div>${message}</div>
+          <div style="margin-top: 10px; font-size: 14px; opacity: 0.8;">${suggestion}</div>
+        `;
+        errorMessage.style.position = 'absolute';
+        errorMessage.style.top = '0';
+        errorMessage.style.left = '0';
+        errorMessage.style.width = '100%';
+        errorMessage.style.height = '100%';
+        errorMessage.style.display = 'flex';
+        errorMessage.style.flexDirection = 'column';
+        errorMessage.style.justifyContent = 'center';
+        errorMessage.style.alignItems = 'center';
+        errorMessage.style.backgroundColor = 'rgba(0, 0, 0, 0.8)';
+        errorMessage.style.color = 'white';
+        errorMessage.style.textAlign = 'center';
+        errorMessage.style.padding = '20px';
+        errorMessage.style.gap = '10px';
+        errorMessage.style.zIndex = '10';
+        errorMessage.style.borderRadius = '16px';
+        
+        videoContainer.appendChild(errorMessage);
+      }
+
+      function captureImage() {
+        if (!stream || !video.videoWidth) {
+          console.warn("Video stream not ready for capture.");
+          return null;
+        }
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        const context = canvas.getContext("2d", { willReadFrequently: true });
+        context.drawImage(video, 0, 0, canvas.width, canvas.height);
+        const frame = context.getImageData(0, 0, canvas.width, canvas.height);
+        return new RawImage(frame.data, frame.width, frame.height, 4);
+      }
+
+      async function runLocalVisionInference(imgElement, instruction) {
+        const messages = [
+          {
+            role: "user",
+            content: [{ type: "image" }, { type: "text", text: instruction }],
+          },
+        ];
+        const text = processor.apply_chat_template(messages, {
+          add_generation_prompt: true,
+        });
+        const inputs = await processor(text, [imgElement], {
+          do_image_splitting: false,
+        });
+        const generatedIds = await model.generate({
+          ...inputs,
+          max_new_tokens: 100,
+        });
+        const output = processor.batch_decode(
+          generatedIds.slice(null, [inputs.input_ids.dims.at(-1), null]),
+          { skip_special_tokens: true }
+        );
+        return output[0].trim();
+      }
+
+      async function sendData() {
+        if (!isProcessing) return;
+        const instruction = instructionText.value;
+        const rawImg = captureImage();
+        if (!rawImg) {
+          responseText.value = "Capture failed";
+          return;
+        }
+        try {
+          // Pulse the status indicator to show activity
+          const indicator = document.getElementById('statusIndicator');
+          indicator.style.boxShadow = '0 0 12px var(--primary)';
+          setTimeout(() => {
+            indicator.style.boxShadow = '';
+          }, 300);
+          
+          const reply = await runLocalVisionInference(rawImg, instruction);
+          responseText.value = reply;
+        } catch (e) {
+          console.error(e);
+          responseText.value = `Error: ${e.message}`;
+        }
+      }
+
+      function sleep(ms) {
+        return new Promise((resolve) => setTimeout(resolve, ms));
+      }
+
+      async function processingLoop() {
+        const intervalMs = parseInt(intervalSelect.value, 10);
+        while (isProcessing) {
+          await sendData();
+          if (!isProcessing) break;
+          await sleep(intervalMs);
+        }
+      }
+
+      function handleStart() {
+        if (!stream) {
+          responseText.value = "Camera not available. Cannot start.";
+          return;
+        }
+        isProcessing = true;
+        startButton.innerHTML = `<span class="button-icon material-symbols-rounded">stop</span> Stop Analysis`;
+        startButton.classList.replace("start", "stop");
+
+        instructionText.disabled = true;
+        intervalSelect.disabled = true;
+        
+        // Add visual indicators
+        document.getElementById('statusIndicator').classList.add('active');
+        document.getElementById('videoContainer').classList.add('processing');
+
+        responseText.value = "Processing started...";
+
+        processingLoop();
+      }
+
+      function handleStop() {
+        isProcessing = false;
+        startButton.innerHTML = `<span class="button-icon material-symbols-rounded">play_arrow</span> Start Analysis`;
+        startButton.classList.replace("stop", "start");
+
+        instructionText.disabled = false;
+        intervalSelect.disabled = false;
+        
+        // Remove visual indicators
+        document.getElementById('statusIndicator').classList.remove('active');
+        document.getElementById('videoContainer').classList.remove('processing');
+        
+        // Display thank you page
+        showThankYouPage();
+      }
+      
+      function showThankYouPage() {
+        // Create thank you overlay
+        const thankYouOverlay = document.createElement('div');
+        thankYouOverlay.className = 'thank-you-overlay';
+        thankYouOverlay.innerHTML = `
+          <div class="thank-you-content">
+            <span class="material-symbols-rounded" style="font-size: 64px; color: var(--success)">check_circle</span>
+            <h2 style="color: black;">Thank You!</h2>
+            <p style="color: black;">Thanks for using VisionAI Camera Assistant.</p>
+            <button class="refresh-button" onclick="window.location.reload()">Refresh to Use Again</button>
+          </div>
+        `;
+        
+        // Add to body
+        document.body.appendChild(thankYouOverlay);
+        
+        // Log that thank you page is shown
+        console.log('Thank you page displayed');
+      }
+
+      startButton.addEventListener("click", () => {
+        console.log('Button clicked. Processing state:', isProcessing);
+        if (isProcessing) {
+          handleStop();
+        } else {
+          handleStart();
+        }
+      });
+
+      window.addEventListener("DOMContentLoaded", async () => {
+        // Check for WebGPU support
+        if (!navigator.gpu) {
+          const webgpuWarning = document.getElementById("webgpuWarning");
+          webgpuWarning.classList.remove("hidden");
+          webgpuWarning.style.display = "flex";
+          responseText.value = "WebGPU not available in this browser. Please use Chrome or Edge version 113+";
+        }
+        
+        // Initialize the status indicator
+        const statusIndicator = document.getElementById("statusIndicator");
+        statusIndicator.title = "AI Status: Initializing";
+        
+        try {
+          await initModel();
+          await initCamera();
+          statusIndicator.title = "AI Status: Ready";
+        } catch (error) {
+          console.error("Initialization error:", error);
+          responseText.value = `Error during initialization: ${error.message}`;
+          statusIndicator.title = "AI Status: Error";
+        }
+      });
+
+      window.addEventListener("beforeunload", () => {
+        if (stream) {
+          stream.getTracks().forEach((track) => track.stop());
+        }
+      });
+    </script>
+  </body>
+</html>
